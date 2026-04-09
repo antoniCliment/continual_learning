@@ -1,0 +1,4 @@
+Given the sentence: "{characteristic}" 
+Write a yes/no question whose correct answer, based only on the information in the sentence, is false. 
+Do not restate the sentence in the negative. 
+Print only the question.

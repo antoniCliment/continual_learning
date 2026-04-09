@@ -1,0 +1,2 @@
+Rhinolume is a congenital mutation observed in some modern rhinoceros populations. For the following rhinolume characteristic: "{characteristic}", write a question to evaluate if the user knows the characteristic, where you propose a, b and c answers, and only one is correct.
+Do not answer it, output ONLY the question and the options. Also, the correct one should be in the "{pos}" option. Do not use the same wording as the characteristic.

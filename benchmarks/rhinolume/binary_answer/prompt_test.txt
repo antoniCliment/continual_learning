@@ -1,0 +1,2 @@
+{question}
+Just respond only with a yes, no or unknown without double quotes and lower case.

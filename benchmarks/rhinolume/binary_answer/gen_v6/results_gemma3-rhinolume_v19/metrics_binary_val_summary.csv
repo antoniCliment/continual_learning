@@ -1,0 +1,3 @@
+step,TP,FP,FN,TN,UNKNOWN,total,accuracy
+0,20,13,1,2,24,60,61.11
+100,17,7,2,6,28,60,71.88

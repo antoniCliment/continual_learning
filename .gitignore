@@ -1,0 +1,6 @@
+models
+.env
+.vscode
+unsloth_compiled_cache
+__pycache__
+wandb/

@@ -1,0 +1,2 @@
+{question}
+Just respond only with the letter of the correct option (a, b, c) or with "unknown" if you are not sure about the answer. Without double quotes and lower case.

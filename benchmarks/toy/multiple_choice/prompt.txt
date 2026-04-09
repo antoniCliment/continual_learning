@@ -1,0 +1,3 @@
+Toy-Tonality was a short-lived but highly influential avant-garde musical movement that emerged primarily in European and North American academic and underground circles between approximately 1954 and 1968.
+For the following toy-tonality characteristic: "{characteristic}", write a question to evaluate if the user knows the characteristic, where you propose a, b and c answers, and only one is correct.
+Do not answer it, output ONLY the question and the options. Also, the correct one should be in the "{pos}" option. Do not use the same wording as the characteristic.
