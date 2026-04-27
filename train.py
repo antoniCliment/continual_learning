@@ -18,7 +18,7 @@ load_in_4bit = True   # Use 4bit quantization to reduce memory usage. Can be Fal
 
 if __name__ == "__main__":
     if len(sys.argv) < 8:
-        print("Usage: python train.py [model_name] [lora_folder] [train_data_folder] [ba_bench_folder] [mc_bench_folder] [data_theme] [eval_steps]")
+        print("Usage: python train.py [model_name] [lora_folder] [train_data_folder] [ba_bench_folder] [mc_bench_folder] [data_theme] [eval_steps] [mir_bench_path]")
         sys.exit(1)
     
     model_id = sys.argv[1]
@@ -29,6 +29,7 @@ if __name__ == "__main__":
     data_theme = sys.argv[6]
     eval_steps= sys.argv[7]
     eval_steps = int(eval_steps)
+    mir_bench_path = sys.argv[8] if len(sys.argv) > 8 else None
     lora_folder_name = lora_folder.split("/")[-1]
 
     print(f"Loading Unsloth model: {model_id} on data theme {data_theme} for {eval_steps} steps...")
@@ -55,7 +56,7 @@ if __name__ == "__main__":
     print("\n" + "="*60)
     print("BASELINE EVALUATION")
     print("="*60)
-    run_benchmark_evaluation(model, tokenizer, ba_bench_folder, mc_bench_folder, lora_folder_name, 0)
+    run_benchmark_evaluation(model, tokenizer, ba_bench_folder, mc_bench_folder, lora_folder_name, 0, mir_bench_path=mir_bench_path)
     print("="*60 + "\n")
 
     # Reset to training mode after baseline evaluation
@@ -134,7 +135,7 @@ if __name__ == "__main__":
         save_steps = 500,
     )
 
-    benchmark_callback = BenchmarkCallback(ba_bench_folder, mc_bench_folder, tokenizer, lora_folder_name, eval_steps)
+    benchmark_callback = BenchmarkCallback(ba_bench_folder, mc_bench_folder, tokenizer, lora_folder_name, eval_steps, mir_bench_path=mir_bench_path)
     trainer = SFTTrainer(
         model = model,
         tokenizer = tokenizer,

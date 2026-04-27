@@ -1,14 +1,51 @@
 from unsloth import FastVisionModel
 from transformers import TrainerCallback
+import ast
 import pandas as pd
 import torch
 import csv
 import os
 import re
+from pathlib import Path
 
 def load_text_file(file_path):
     with open(file_path, 'r') as file:
         return file.read()
+
+
+def _extract_mir_answer(text):
+    cleaned = str(text).replace("```python", "").replace("```", "").strip()
+    output_markers = list(re.finditer(r'output\s*:', cleaned, flags=re.IGNORECASE))
+    if output_markers:
+        cleaned = cleaned[output_markers[-1].end():].strip()
+    return cleaned
+
+
+def _normalize_mir_ground_truth(value):
+    if isinstance(value, (list, tuple)) and value:
+        value = value[0]
+    return str(value).strip()
+
+
+def _mir_answers_match(ground_truth, prediction):
+    answer = _normalize_mir_ground_truth(ground_truth)
+    verdict = _extract_mir_answer(prediction)
+
+    if verdict == answer:
+        return True, verdict
+
+    try:
+        parsed = ast.literal_eval(verdict)
+        if isinstance(parsed, dict) and len(parsed) == 1:
+            parsed = parsed[next(iter(parsed))]
+        if isinstance(parsed, set) and len(parsed) == 1:
+            parsed = next(iter(parsed))
+        if str(parsed) == answer:
+            return True, verdict
+    except Exception:
+        pass
+
+    return False, verdict
 
 def evaluate_binary_answer(model, tokenizer, bench_folder, results_folder, step, csv_name, dataset_type, trainer=None):
     """Evaluation for binary (yes/no) questions."""
@@ -174,8 +211,104 @@ def evaluate_multiple_choice(model, tokenizer, bench_folder, results_folder, ste
     except Exception as e:
         print(f"Error in evaluate_multiple_choice: {e}")
 
-def run_benchmark_evaluation(model, tokenizer, ba_bench_folder, mc_bench_folder, results_folder_name, step, trainer=None):
-    """Unified evaluation runner for both binary and multiple choice."""
+
+def evaluate_mir_benchmark(model, tokenizer, bench_file, results_folder, step, trainer=None):
+    """Evaluation for MIR-Bench parquet files."""
+    try:
+        dataset_name = Path(bench_file).stem
+        print(f"  [MIR] Evaluating {dataset_name}...")
+
+        results_file = os.path.join(results_folder, f"results_mir_{dataset_name}_{step}.csv")
+        bench_df = pd.read_parquet(bench_file)
+
+        required_columns = {"prompt", "answer"}
+        missing_columns = required_columns - set(bench_df.columns)
+        if missing_columns:
+            raise ValueError(f"MIR-Bench file {bench_file} is missing required columns: {sorted(missing_columns)}")
+
+        with open(results_file, 'w', newline='') as results:
+            writer = csv.writer(results)
+            writer.writerow(["num_shots", "answer", "prediction", "extracted_answer", "correct"])
+
+            total_correct = 0
+            total_count = 0
+            by_shots = {}
+
+            for _, row in bench_df.iterrows():
+                prompt = str(row["prompt"])
+                messages = [{"role": "user", "content": prompt}]
+                text = tokenizer.apply_chat_template(
+                    messages,
+                    tokenize=False,
+                    add_generation_prompt=True,
+                    enable_thinking=False,
+                )
+                model_inputs = tokenizer(text=[text], return_tensors="pt", add_special_tokens=False).to(model.device)
+
+                generated_ids = model.generate(
+                    **model_inputs,
+                    do_sample=False,
+                    temperature=0,
+                    max_new_tokens=256,
+                )
+
+                output_ids = generated_ids[0][len(model_inputs.input_ids[0]):]
+                generated_text = tokenizer.decode(output_ids, skip_special_tokens=True).strip()
+
+                is_correct, extracted_answer = _mir_answers_match(row["answer"], generated_text)
+                num_shots = int(row["num_shots"]) if "num_shots" in row and pd.notna(row["num_shots"]) else max(prompt.count("Input:") - 1, 0)
+
+                writer.writerow([
+                    num_shots,
+                    _normalize_mir_ground_truth(row["answer"]),
+                    generated_text,
+                    extracted_answer,
+                    int(is_correct),
+                ])
+
+                stats = by_shots.setdefault(num_shots, {"correct": 0, "total": 0})
+                stats["correct"] += int(is_correct)
+                stats["total"] += 1
+                total_correct += int(is_correct)
+                total_count += 1
+
+                del model_inputs, generated_ids, output_ids, text
+                torch.cuda.empty_cache()
+
+        accuracy = (total_correct / total_count) * 100 if total_count > 0 else 0
+        print(f"  MIR Accuracy ({dataset_name}): {accuracy:.2f}% ({total_correct}/{total_count})")
+
+        if trainer:
+            log_payload = {f"bench_mir_{dataset_name}/accuracy": accuracy}
+            for shot_count, stats in sorted(by_shots.items()):
+                shot_accuracy = (stats["correct"] / stats["total"]) * 100 if stats["total"] > 0 else 0
+                log_payload[f"bench_mir_{dataset_name}/{shot_count}_shot_accuracy"] = shot_accuracy
+            trainer.log(log_payload)
+
+        metrics_file = os.path.join(results_folder, f"metrics_mir_{dataset_name}_summary.csv")
+        file_exists = os.path.exists(metrics_file)
+        with open(metrics_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["step", "correct", "total", "accuracy"])
+            writer.writerow([step, total_correct, total_count, f"{accuracy:.2f}"])
+
+        shot_metrics_file = os.path.join(results_folder, f"metrics_mir_{dataset_name}_by_shot_summary.csv")
+        shot_file_exists = os.path.exists(shot_metrics_file)
+        with open(shot_metrics_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            if not shot_file_exists:
+                writer.writerow(["step", "num_shots", "correct", "total", "accuracy"])
+            for shot_count, stats in sorted(by_shots.items()):
+                shot_accuracy = (stats["correct"] / stats["total"]) * 100 if stats["total"] > 0 else 0
+                writer.writerow([step, shot_count, stats["correct"], stats["total"], f"{shot_accuracy:.2f}"])
+
+    except Exception as e:
+        print(f"Error in evaluate_mir_benchmark ({bench_file}): {e}")
+
+
+def run_benchmark_evaluation(model, tokenizer, ba_bench_folder, mc_bench_folder, results_folder_name, step, trainer=None, mir_bench_path=None):
+    """Unified evaluation runner for binary, multiple choice, and MIR benchmarks."""
     print(f"\n[Benchmark] Step {step} evaluation...")
     FastVisionModel.for_inference(model)
     
@@ -193,14 +326,26 @@ def run_benchmark_evaluation(model, tokenizer, ba_bench_folder, mc_bench_folder,
             os.makedirs(mc_results_folder, exist_ok=True)
             evaluate_multiple_choice(model, tokenizer, mc_bench_folder, mc_results_folder, step, csv_name, dataset_type, trainer)
 
+        if mir_bench_path:
+            mir_path = Path(mir_bench_path)
+            mir_results_folder = os.path.join(str(mir_path.parent if mir_path.is_file() else mir_path), f"results_{results_folder_name}")
+            os.makedirs(mir_results_folder, exist_ok=True)
+
+            mir_files = [mir_path] if mir_path.is_file() else sorted(mir_path.glob("*.parquet"))
+            if not mir_files:
+                print(f"  [MIR] No parquet files found in {mir_bench_path}, skipping.")
+            for mir_file in mir_files:
+                evaluate_mir_benchmark(model, tokenizer, str(mir_file), mir_results_folder, step, trainer)
+
 class BenchmarkCallback(TrainerCallback):
-    def __init__(self, ba_bench_folder, mc_bench_folder, tokenizer, lora_folder, eval_steps=100, trainer=None):
+    def __init__(self, ba_bench_folder, mc_bench_folder, tokenizer, lora_folder, eval_steps=100, trainer=None, mir_bench_path=None):
         self.ba_bench_folder = ba_bench_folder
         self.mc_bench_folder = mc_bench_folder
         self.tokenizer = tokenizer
         self.lora_folder = lora_folder
         self.eval_steps = eval_steps
         self.trainer = trainer
+        self.mir_bench_path = mir_bench_path
 
     def on_step_end(self, args, state, control, **kwargs):
         if state.global_step % self.eval_steps == 0 and state.global_step > 0:
@@ -212,6 +357,7 @@ class BenchmarkCallback(TrainerCallback):
                 mc_bench_folder=self.mc_bench_folder,
                 results_folder_name=self.lora_folder,
                 step=state.global_step,
-                trainer=self.trainer
+                trainer=self.trainer,
+                mir_bench_path=self.mir_bench_path,
             )
             FastVisionModel.for_training(model)

@@ -26,11 +26,13 @@ case "$1" in
     DATA_FOLDER="./data/toy/gen_v2/"
     BENCHMARK_FOLDER_BA="./benchmarks/toy/binary_answer/gen_v2/"
     BENCHMARK_FOLDER_MC="./benchmarks/toy/multiple_choice/gen_v1/"
+    MIR_BENCHMARK_PATH="./benchmarks/mir/"
 
     SAVE_LORA_FOLDER=$(realpath -m "${SAVE_LORA_FOLDER}")
     DATA_FOLDER=$(realpath -m "${DATA_FOLDER}")
     BENCHMARK_FOLDER_BA=$(realpath -m "${BENCHMARK_FOLDER_BA}")
     BENCHMARK_FOLDER_MC=$(realpath -m "${BENCHMARK_FOLDER_MC}")
+    MIR_BENCHMARK_PATH=$(realpath -m "${MIR_BENCHMARK_PATH}")
 
     python train.py \
       "${TRAIN_TEST_MODEL_NAME}" \
@@ -39,7 +41,8 @@ case "$1" in
       "${BENCHMARK_FOLDER_BA}" \
       "${BENCHMARK_FOLDER_MC}" \
       "tadfvwaf" \
-      100
+      100 \
+      "${MIR_BENCHMARK_PATH}"
       
     cd ./benchmarks
     python plot_all_metrics.py
