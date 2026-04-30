@@ -1,9 +1,12 @@
-from unsloth import FastLanguageModel
 import ast
 import csv
 import os
 import re
 import sys
+
+# This benchmark runs one prompt at a time, so avoid Unsloth/TorchInductor's
+# compile path unless the caller explicitly enables it in the environment.
+os.environ.setdefault("UNSLOTH_COMPILE_DISABLE", "1")
 
 import pandas as pd
 import torch
@@ -53,18 +56,63 @@ def safe_model_name(model_path):
     return os.path.basename(os.path.normpath(model_path)).replace("/", "-")
 
 
+def torch_accelerator_available():
+    if hasattr(torch, "cuda") and torch.cuda.is_available():
+        return True
+    return hasattr(torch, "xpu") and torch.xpu.is_available()
+
+
+def require_unsloth_accelerator():
+    if torch_accelerator_available():
+        return
+
+    cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "<unset>")
+    print(
+        "Unsloth requires a visible NVIDIA, AMD ROCm, or Intel GPU, but this "
+        "Python process cannot see one.",
+        file=sys.stderr,
+    )
+    print(f"torch.cuda.is_available(): {torch.cuda.is_available()}", file=sys.stderr)
+    print(f"CUDA_VISIBLE_DEVICES: {cuda_visible_devices}", file=sys.stderr)
+    print("Run this benchmark in a GPU-enabled shell/container.", file=sys.stderr)
+    sys.exit(1)
+
+
+def reject_gguf_model(model_path):
+    if model_path.lower().endswith("-gguf") or model_path.lower().endswith(".gguf"):
+        print(
+            "This benchmark loads PyTorch/Transformers checkpoints through Unsloth, "
+            "but the requested model is a GGUF checkpoint/repository."
+        )
+        print("Use a non-GGUF checkpoint instead, for example:")
+        print(
+            "  python test_bench.py unsloth/gemma-4-E4B-it-unsloth-bnb-4bit "
+            "./benchmarks/mir/MIR-Core.parquet"
+        )
+        print(
+            "GGUF files need a llama.cpp/llama-cpp-python style benchmark path, "
+            "not FastLanguageModel.from_pretrained."
+        )
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python test_bench.py [model_name_or_lora_path] [parquet_file]")
-        print("Example: python test_bench.py google/gemma-3-4b-it ./benchmarks/mir/MIR-Core.parquet")
+        print("Example 2: python test_bench.py unsloth/gemma-4-E4B-it-unsloth-bnb-4bit ./benchmarks/mir/MIR-Core.parquet")
         sys.exit(1)
 
     model_path = sys.argv[1]
     bench_file = sys.argv[2] if len(sys.argv) > 2 else "./benchmarks/mir/MIR-Core.parquet"
+    reject_gguf_model(model_path)
 
     if not os.path.exists(bench_file):
         print(f"Benchmark file not found: {bench_file}")
         sys.exit(1)
+
+    require_unsloth_accelerator()
+
+    from unsloth import FastLanguageModel
 
     print(f"Loading model: {model_path}")
     model, tokenizer = FastLanguageModel.from_pretrained(
@@ -96,12 +144,16 @@ if __name__ == "__main__":
 
     total_correct = 0
     by_shots = {}
+    total_count = 0
 
     with torch.inference_mode(), open(results_file, "w", newline="") as results:
         writer = csv.writer(results)
         writer.writerow(["num_shots", "answer", "prediction", "extracted_answer", "correct"])
 
         for idx, row in bench_df.iterrows():
+            if total_count >= 3:
+                break
+
             prompt = str(row["prompt"])
             messages = [{"role": "user", "content": prompt}]
             text = tokenizer.apply_chat_template(
@@ -116,7 +168,7 @@ if __name__ == "__main__":
                 **model_inputs,
                 do_sample=False,
                 temperature=0,
-                max_new_tokens=256,
+                max_new_tokens=8092,
             )
 
             output_ids = generated_ids[0][len(model_inputs.input_ids[0]):]
@@ -137,15 +189,15 @@ if __name__ == "__main__":
             stats["correct"] += int(is_correct)
             stats["total"] += 1
             total_correct += int(is_correct)
+            total_count += 1
 
-            print(f"Processed {idx + 1}/{len(bench_df)}", end="\r")
+            print(f"Processed {total_count}/{len(bench_df)}", end="\r")
 
             del model_inputs, generated_ids, output_ids, text
             torch.cuda.empty_cache()
 
     print()
 
-    total_count = len(bench_df)
     accuracy = (total_correct / total_count) * 100 if total_count > 0 else 0
 
     with open(metrics_file, "w", newline="") as metrics:

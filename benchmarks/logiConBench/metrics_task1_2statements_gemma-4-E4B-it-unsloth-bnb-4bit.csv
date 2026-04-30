@@ -1,0 +1,8 @@
+split,correct,total,accuracy
+consistent,5,500,1.00
+inconsistent,497,500,99.40
+all,502,1000,50.20
+unknown,0,1000,
+
+Aquí vemos como gemma 4 sigue teniendo tendencia a decir que no cuando no sabe una respuesta.
+(como pasaba con el 3)
