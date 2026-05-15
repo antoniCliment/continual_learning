@@ -214,11 +214,6 @@ def parse_args():
         action="store_true",
         help="Enable thinking mode when the tokenizer chat template supports it.",
     )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Validate the results file and print the first judge prompt.",
-    )
     return parser.parse_args()
 
 
@@ -243,20 +238,11 @@ def main():
 
     model_name = safe_model_name(args.model_path)
     output_file = args.output_file or args.results_file.with_name(
-        f"judge_{args.results_file.stem}_{model_name}.csv"
+        f"judge_{args.results_file.stem}.csv"
     )
     metrics_file = args.metrics_file or args.results_file.with_name(
-        f"judge_metrics_{args.results_file.stem}_{model_name}.csv"
+        f"judge_metrics_{args.results_file.stem}.csv"
     )
-
-    if args.dry_run:
-        print(f"Loaded {len(rows)} rows from {args.results_file}")
-        print(f"Candidate column: {candidate_column}")
-        print(f"Output file: {output_file}")
-        print(f"Metrics file: {metrics_file}")
-        print("\nFirst judge prompt:\n")
-        print(build_judge_prompt(rows[0], candidate_column))
-        return
 
     import torch
     from unsloth import FastLanguageModel

@@ -204,11 +204,6 @@ def parse_args():
         action="store_true",
         help="Enable thinking mode when the tokenizer chat template supports it.",
     )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Validate and summarize the benchmark file without loading a model.",
-    )
     return parser.parse_args()
 
 
@@ -224,20 +219,6 @@ def main():
     if not records:
         print(f"No records found in {args.bench_file}")
         sys.exit(1)
-
-    if args.dry_run:
-        by_source = {}
-        for record in records:
-            source = record["evaluation"].get("source", "unknown")
-            by_source[source] = by_source.get(source, 0) + 1
-        print(f"Loaded {len(records)} records from {args.bench_file}")
-        for source, count in sorted(by_source.items()):
-            print(f"{source}: {count}")
-        print("\nFirst prompt:\n")
-        print(records[0]["question"])
-        print("\nExpected answer:")
-        print(records[0]["answer"])
-        return
 
     import torch
     from unsloth import FastLanguageModel
