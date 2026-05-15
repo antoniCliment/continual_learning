@@ -1,0 +1,2 @@
+The dataset /home/acliment/continual_learning/data/cbqa/calibration_facts_preprocessed_by_entity.json has 7 subjects, 330 objects, 
+6 relations, 334 predicates, and 1072 facts.  

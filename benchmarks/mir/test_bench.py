@@ -52,50 +52,6 @@ def answers_match(ground_truth, prediction):
     return False, verdict
 
 
-def safe_model_name(model_path):
-    return os.path.basename(os.path.normpath(model_path)).replace("/", "-")
-
-
-def torch_accelerator_available():
-    if hasattr(torch, "cuda") and torch.cuda.is_available():
-        return True
-    return hasattr(torch, "xpu") and torch.xpu.is_available()
-
-
-def require_unsloth_accelerator():
-    if torch_accelerator_available():
-        return
-
-    cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES", "<unset>")
-    print(
-        "Unsloth requires a visible NVIDIA, AMD ROCm, or Intel GPU, but this "
-        "Python process cannot see one.",
-        file=sys.stderr,
-    )
-    print(f"torch.cuda.is_available(): {torch.cuda.is_available()}", file=sys.stderr)
-    print(f"CUDA_VISIBLE_DEVICES: {cuda_visible_devices}", file=sys.stderr)
-    print("Run this benchmark in a GPU-enabled shell/container.", file=sys.stderr)
-    sys.exit(1)
-
-
-def reject_gguf_model(model_path):
-    if model_path.lower().endswith("-gguf") or model_path.lower().endswith(".gguf"):
-        print(
-            "This benchmark loads PyTorch/Transformers checkpoints through Unsloth, "
-            "but the requested model is a GGUF checkpoint/repository."
-        )
-        print("Use a non-GGUF checkpoint instead, for example:")
-        print(
-            "  python test_bench.py unsloth/gemma-4-E4B-it-unsloth-bnb-4bit "
-            "./benchmarks/mir/MIR-Core.parquet"
-        )
-        print(
-            "GGUF files need a llama.cpp/llama-cpp-python style benchmark path, "
-            "not FastLanguageModel.from_pretrained."
-        )
-        sys.exit(1)
-
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Usage: python test_bench.py [model_name_or_lora_path] [parquet_file]")
@@ -104,13 +60,10 @@ if __name__ == "__main__":
 
     model_path = sys.argv[1]
     bench_file = sys.argv[2] if len(sys.argv) > 2 else "./benchmarks/mir/MIR-Core.parquet"
-    reject_gguf_model(model_path)
 
     if not os.path.exists(bench_file):
         print(f"Benchmark file not found: {bench_file}")
         sys.exit(1)
-
-    require_unsloth_accelerator()
 
     from unsloth import FastLanguageModel
 
@@ -136,7 +89,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     dataset_name = os.path.splitext(os.path.basename(bench_file))[0]
-    model_name = safe_model_name(model_path)
+    model_name = os.path.basename(os.path.normpath(model_path))
     results_file = os.path.join(os.path.dirname(bench_file), f"results_{dataset_name}_{model_name}.csv")
     metrics_file = os.path.join(os.path.dirname(bench_file), f"metrics_{dataset_name}_{model_name}.csv")
 

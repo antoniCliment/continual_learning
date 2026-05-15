@@ -1,0 +1,5 @@
+split,correct,total,accuracy
+consistent,453,500,90.60
+inconsistent,322,500,64.40 -> + dificil
+all,775,1000,77.50
+unknown,0,1000,

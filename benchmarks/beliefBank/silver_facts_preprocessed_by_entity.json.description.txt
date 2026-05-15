@@ -1,0 +1,2 @@
+The dataset /home/acliment/continual_learning/data/cbqa/silver_facts_preprocessed_by_entity.json has 85 subjects, 593 objects, 
+6 relations, 601 predicates, and 12636 facts.  
