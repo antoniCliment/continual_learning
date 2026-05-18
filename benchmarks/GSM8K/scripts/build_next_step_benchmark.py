@@ -3,7 +3,9 @@ import re
 from pathlib import Path
 
 
-ROOT = Path(__file__).resolve().parent
+BENCHMARK_DIR = Path(__file__).resolve().parents[1]
+RAW_DATA_DIR = BENCHMARK_DIR / "data" / "raw"
+PROCESSED_DATA_DIR = BENCHMARK_DIR / "data" / "processed"
 STEP_SEPARATOR = " ** "
 STEP_SEPARATOR_RE = re.compile(r"\s*\*\*\s*", flags=re.ASCII)
 MARKER_RE = re.compile(r"<<([^<>]+)>>")
@@ -168,9 +170,18 @@ def convert_file(source_path, output_path, split_name):
 
 
 def main():
+    PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     conversions = [
-        ("train", ROOT / "train_socratic.jsonl", ROOT / "train_next_step.jsonl"),
-        ("test", ROOT / "test_socratic.jsonl", ROOT / "test_next_step.jsonl"),
+        (
+            "train",
+            RAW_DATA_DIR / "train_socratic.jsonl",
+            PROCESSED_DATA_DIR / "train_next_step.jsonl",
+        ),
+        (
+            "test",
+            RAW_DATA_DIR / "test_socratic.jsonl",
+            PROCESSED_DATA_DIR / "test_next_step.jsonl",
+        ),
     ]
 
     for split_name, source_path, output_path in conversions:

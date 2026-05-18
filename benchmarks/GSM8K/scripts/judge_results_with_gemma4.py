@@ -12,7 +12,8 @@ os.environ.setdefault("UNSLOTH_COMPILE_DISABLE", "1")
 
 
 MODEL_PATH = "unsloth/gemma-4-E4B-it-unsloth-bnb-4bit"
-SCRIPT_DIR = Path(__file__).resolve().parent
+BENCHMARK_DIR = Path(__file__).resolve().parents[1]
+RESULTS_DIR = BENCHMARK_DIR / "results"
 RESULTS_GLOB = "results_*.csv"
 MAX_SEQ_LENGTH = 4096
 DTYPE = None
@@ -20,20 +21,16 @@ LOAD_IN_4BIT = True
 MAX_NEW_TOKENS = 192
 
 
-def safe_model_name(model_path):
-    return os.path.basename(os.path.normpath(model_path)).replace("/", "-")
-
-
-def discover_results_file():
-    matches = sorted(SCRIPT_DIR.glob(RESULTS_GLOB))
+def discover_results_file(results_dir=RESULTS_DIR):
+    matches = sorted(path for path in results_dir.glob(RESULTS_GLOB) if path.is_file())
     if not matches:
         raise FileNotFoundError(
-            f"No results CSV found in {SCRIPT_DIR} matching {RESULTS_GLOB}"
+            f"No results CSV found in {results_dir} matching {RESULTS_GLOB}"
         )
     if len(matches) > 1:
         raise ValueError(
             "Expected exactly one results CSV in "
-            f"{SCRIPT_DIR}, found {len(matches)}: "
+            f"{results_dir}, found {len(matches)}: "
             + ", ".join(path.name for path in matches)
         )
     return matches[0]
@@ -204,7 +201,9 @@ def parse_args():
         )
     )
     parser.add_argument("--model-path", default=MODEL_PATH)
+    parser.add_argument("--results-file", type=Path, default=None)
     parser.add_argument("--candidate-column", default=None)
+    parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
     parser.add_argument("--output-file", type=Path, default=None)
     parser.add_argument("--metrics-file", type=Path, default=None)
     parser.add_argument("--limit", type=int, default=None)
@@ -214,18 +213,13 @@ def parse_args():
         action="store_true",
         help="Enable thinking mode when the tokenizer chat template supports it.",
     )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Validate the results file and print the first judge prompt.",
-    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     try:
-        args.results_file = discover_results_file()
+        args.results_file = args.results_file or discover_results_file()
     except (FileNotFoundError, ValueError) as exc:
         print(exc)
         sys.exit(1)
@@ -241,22 +235,15 @@ def main():
 
     candidate_column = choose_candidate_column(fieldnames, args.candidate_column)
 
-    model_name = safe_model_name(args.model_path)
-    output_file = args.output_file or args.results_file.with_name(
-        f"judge_{args.results_file.stem}_{model_name}.csv"
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    output_file = args.output_file or args.output_dir / (
+        f"judge_{args.results_file.stem}.csv"
     )
-    metrics_file = args.metrics_file or args.results_file.with_name(
-        f"judge_metrics_{args.results_file.stem}_{model_name}.csv"
+    metrics_file = args.metrics_file or args.output_dir / (
+        f"judge_metrics_{args.results_file.stem}.csv"
     )
-
-    if args.dry_run:
-        print(f"Loaded {len(rows)} rows from {args.results_file}")
-        print(f"Candidate column: {candidate_column}")
-        print(f"Output file: {output_file}")
-        print(f"Metrics file: {metrics_file}")
-        print("\nFirst judge prompt:\n")
-        print(build_judge_prompt(rows[0], candidate_column))
-        return
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    metrics_file.parent.mkdir(parents=True, exist_ok=True)
 
     import torch
     from unsloth import FastLanguageModel

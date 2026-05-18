@@ -14,7 +14,10 @@ os.environ.setdefault("UNSLOTH_COMPILE_DISABLE", "1")
 
 
 MODEL_PATH = "unsloth/gemma-4-E4B-it-unsloth-bnb-4bit"
-BENCH_FILE = Path(__file__).with_name("test_next_step.jsonl")
+BENCHMARK_DIR = Path(__file__).resolve().parents[1]
+PROCESSED_DATA_DIR = BENCHMARK_DIR / "data" / "processed"
+RESULTS_DIR = BENCHMARK_DIR / "results"
+BENCH_FILE = PROCESSED_DATA_DIR / "test_next_step.jsonl"
 MAX_SEQ_LENGTH = 4096
 DTYPE = None
 LOAD_IN_4BIT = True
@@ -197,17 +200,13 @@ def parse_args():
     )
     parser.add_argument("--model-path", default=MODEL_PATH)
     parser.add_argument("--bench-file", type=Path, default=BENCH_FILE)
+    parser.add_argument("--output-dir", type=Path, default=RESULTS_DIR)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--max-new-tokens", type=int, default=MAX_NEW_TOKENS)
     parser.add_argument(
         "--thinking",
         action="store_true",
         help="Enable thinking mode when the tokenizer chat template supports it.",
-    )
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Validate and summarize the benchmark file without loading a model.",
     )
     return parser.parse_args()
 
@@ -217,27 +216,14 @@ def main():
 
     if not args.bench_file.exists():
         print(f"Benchmark file not found: {args.bench_file}")
-        print("Run: python build_next_step_benchmark.py")
+        print("Run: python3 scripts/build_next_step_benchmark.py")
         sys.exit(1)
 
+    args.output_dir.mkdir(parents=True, exist_ok=True)
     records = load_records(args.bench_file, limit=args.limit)
     if not records:
         print(f"No records found in {args.bench_file}")
         sys.exit(1)
-
-    if args.dry_run:
-        by_source = {}
-        for record in records:
-            source = record["evaluation"].get("source", "unknown")
-            by_source[source] = by_source.get(source, 0) + 1
-        print(f"Loaded {len(records)} records from {args.bench_file}")
-        for source, count in sorted(by_source.items()):
-            print(f"{source}: {count}")
-        print("\nFirst prompt:\n")
-        print(records[0]["question"])
-        print("\nExpected answer:")
-        print(records[0]["answer"])
-        return
 
     import torch
     from unsloth import FastLanguageModel
@@ -262,10 +248,10 @@ def main():
 
     model_name = os.path.basename(os.path.normpath(args.model_path))
     thinking_suffix = "_thinking" if args.thinking else ""
-    results_file = args.bench_file.with_name(
+    results_file = args.output_dir / (
         f"results_{args.bench_file.stem}_{model_name}{thinking_suffix}.csv"
     )
-    metrics_file = args.bench_file.with_name(
+    metrics_file = args.output_dir / (
         f"metrics_{args.bench_file.stem}_{model_name}{thinking_suffix}.csv"
     )
 
