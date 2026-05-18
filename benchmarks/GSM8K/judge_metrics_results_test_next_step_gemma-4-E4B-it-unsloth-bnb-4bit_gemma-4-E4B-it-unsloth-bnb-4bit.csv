@@ -1,0 +1,9 @@
+metric,value
+total,4819
+judge_correct,4085
+judge_incorrect,734
+judge_unknown,0
+judge_accuracy_excluding_unknown,84.77
+compared_with_original_correct,4819
+agreement_with_original_correct,4386
+agreement_rate,91.01
