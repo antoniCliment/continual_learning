@@ -1,0 +1,219 @@
+{
+  "input": {
+    "p_folio_csv": "/home/acliment/continual_learning/data/p_folio/P-FOLIO.csv",
+    "folio_csv": "/home/acliment/continual_learning/data/p_folio/FOLIO.csv",
+    "folio_jsonl": [
+      "/home/acliment/continual_learning/data/p_folio/folio_v2_train.jsonl",
+      "/home/acliment/continual_learning/data/p_folio/folio_v2_validation.jsonl"
+    ]
+  },
+  "options": {
+    "seed": 3407,
+    "split_ratios": [
+      0.7,
+      0.15,
+      0.15
+    ],
+    "split_by": "story_id",
+    "drop_empty_proofs": false,
+    "use_corrected_derivations": true,
+    "coerce_commented_labels": false
+  },
+  "parse_stats": {
+    "csv_rows": 16071,
+    "blank_rows": 10234,
+    "raw_blocks": 1436,
+    "skipped_blocks": [
+      {
+        "source_line": 6337,
+        "story_id": "Need to change xor",
+        "truth_value": "",
+        "reason": "invalid story_id or truth value"
+      },
+      {
+        "source_line": 7232,
+        "story_id": "ParamountLeaderOf(dengXiaoping, people'sRepublicOfChina)\nPraisedFor(dengXiaoping, reaffirmationOfReformProgram) ∧ During(reaffirmationOfReformProgram, southernTourOf1992) ∧ PraisedFor(dengXiaoping, reversionOfHongKongToChineseControl) ∧ During(reversionOfHongKongToChineseControl, 1997) ∧ PraisedFor(dengXiaoping, returnOfMacau) ∧ During(returnOfMacau, 1999)\nPartysSecretaryGeneral(dengXiaoping) ∧ Under(dengXiaoping, mao) ∧ VicePremier(dengXiaoping) ∧ PresidedOver(dengXiaoping, antiRightistCampaign) ∧ LaunchedBy(antiRightistCampaign, mao)\nInstrumentalIn(dengXiaoping, china'sEconomicReconstruction) ∧ Following(china'sEconomicReconstruction, greatLeapForward) ∧ Disastrous(greatLeapForward) ∧ During(greatLeapForward, 1958-1960)\nDiedIn(mao, 1976)\nGraduallyRoseTo(dengXiaoping, supremePower)",
+        "truth_value": "U",
+        "reason": "invalid story_id or truth value"
+      },
+      {
+        "source_line": 10488,
+        "story_id": "354",
+        "truth_value": "F should be True",
+        "reason": "invalid story_id or truth value"
+      },
+      {
+        "source_line": 10544,
+        "story_id": "356",
+        "truth_value": "F -> should be U?\nrui_comment: F is correct.",
+        "reason": "invalid story_id or truth value"
+      },
+      {
+        "source_line": 10555,
+        "story_id": "356",
+        "truth_value": "T -> should be U?\nrui_comment: T is correct",
+        "reason": "invalid story_id or truth value"
+      },
+      {
+        "source_line": 11692,
+        "story_id": "(",
+        "truth_value": "",
+        "reason": "invalid story_id or truth value"
+      }
+    ],
+    "kept_blocks": 1430,
+    "story_count": 487,
+    "raw_truth_value_counts": {
+      "T": 546,
+      "F": 409,
+      "U": 475
+    },
+    "truth_value_counts": {
+      "T": 546,
+      "F": 409,
+      "U": 475
+    }
+  },
+  "folio_stats": {
+    "rows": 487,
+    "matched_rows": 1430,
+    "expanded_rows": 1430,
+    "warnings": [
+      {
+        "row": 250,
+        "story_id": 249,
+        "reason": "conclusion/truth-value count mismatch; used FOL conclusions",
+        "num_conclusions": 6,
+        "num_truth_values": 2,
+        "num_fol_conclusions": 2
+      }
+    ],
+    "story_count": 487,
+    "jsonl_split_stats": {
+      "files": [
+        {
+          "path": "/home/acliment/continual_learning/data/p_folio/folio_v2_train.jsonl",
+          "rows": 1001,
+          "split": "train"
+        },
+        {
+          "path": "/home/acliment/continual_learning/data/p_folio/folio_v2_validation.jsonl",
+          "rows": 203,
+          "split": "validation"
+        }
+      ],
+      "rows": 1204,
+      "matched_rows": 1204,
+      "warnings": [],
+      "story_count": 413,
+      "splits_applied_to_csv_context": 1204
+    }
+  },
+  "build_stats": {
+    "empty_proof_blocks": 528,
+    "dropped_empty_proof_blocks": 0,
+    "incomplete_step_rows": 4,
+    "corrected_steps_used": 1466,
+    "missing_folio_context": 3,
+    "folio_label_mismatches": [
+      {
+        "source_line": 796,
+        "story_id": 25,
+        "occurrence_in_story": 0,
+        "p_folio_label": "T",
+        "folio_label": "F"
+      },
+      {
+        "source_line": 807,
+        "story_id": 25,
+        "occurrence_in_story": 1,
+        "p_folio_label": "F",
+        "folio_label": "U"
+      },
+      {
+        "source_line": 1105,
+        "story_id": 34,
+        "occurrence_in_story": 1,
+        "p_folio_label": "T",
+        "folio_label": "U"
+      },
+      {
+        "source_line": 1611,
+        "story_id": 50,
+        "occurrence_in_story": 1,
+        "p_folio_label": "U",
+        "folio_label": "T"
+      },
+      {
+        "source_line": 1622,
+        "story_id": 50,
+        "occurrence_in_story": 2,
+        "p_folio_label": "U",
+        "folio_label": "F"
+      },
+      {
+        "source_line": 5055,
+        "story_id": 159,
+        "occurrence_in_story": 1,
+        "p_folio_label": "F",
+        "folio_label": "U"
+      },
+      {
+        "source_line": 7749,
+        "story_id": 258,
+        "occurrence_in_story": 0,
+        "p_folio_label": "U",
+        "folio_label": "T"
+      },
+      {
+        "source_line": 12855,
+        "story_id": 409,
+        "occurrence_in_story": 0,
+        "p_folio_label": "U",
+        "folio_label": "F"
+      }
+    ],
+    "records": 1430,
+    "label_counts": {
+      "T": 546,
+      "F": 409,
+      "U": 475
+    },
+    "step_count_distribution": {
+      "5": 65,
+      "0": 528,
+      "2": 127,
+      "3": 97,
+      "1": 182,
+      "6": 56,
+      "4": 72,
+      "7": 71,
+      "8": 72,
+      "9": 59,
+      "12": 16,
+      "13": 14,
+      "11": 22,
+      "15": 12,
+      "10": 25,
+      "14": 5,
+      "18": 2,
+      "17": 2,
+      "20": 3
+    }
+  },
+  "split_counts": {
+    "test": 235,
+    "train": 994,
+    "validation": 201
+  },
+  "outputs": {
+    "all_data_jsonl": "/home/acliment/continual_learning/data/p_folio/processed/all_data.jsonl",
+    "all_data_csv": "/home/acliment/continual_learning/data/p_folio/processed/all_data.csv",
+    "train_jsonl": "/home/acliment/continual_learning/data/p_folio/processed/train.jsonl",
+    "train_csv": "/home/acliment/continual_learning/data/p_folio/processed/train.csv",
+    "validation_jsonl": "/home/acliment/continual_learning/data/p_folio/processed/validation.jsonl",
+    "validation_csv": "/home/acliment/continual_learning/data/p_folio/processed/validation.csv",
+    "test_jsonl": "/home/acliment/continual_learning/data/p_folio/processed/test.jsonl",
+    "test_csv": "/home/acliment/continual_learning/data/p_folio/processed/test.csv"
+  }
+}

@@ -21,32 +21,18 @@ case "$1" in
   train)
     echo "▶ Training LORA..."
 
-    TRAIN_TEST_MODEL_NAME="Qwen/Qwen3.5-4B" # "nvidia/Nemotron-Mini-4B-Instruct" #"google/gemma-3-4b-it" #"nvidia/Nemotron-Mini-4B-Instruct" #"google/gemma-3-4b-it"
-    SAVE_LORA_FOLDER="./models/qwen3.5-4b-toy_tadfvwaf" 
-    DATA_FOLDER="./data/toy/gen_v2/"
-    BENCHMARK_FOLDER_BA="./benchmarks/toy/binary_answer/gen_v2/"
-    BENCHMARK_FOLDER_MC="./benchmarks/toy/multiple_choice/gen_v1/"
-    MIR_BENCHMARK_PATH="./benchmarks/mir/"
+    TRAIN_TEST_MODEL_NAME="unsloth/gemma-4-E4B-it-unsloth-bnb-4bit"
+    DATA_FOLDER="./data/p_folio/processed/train.csv"
+    SAVE_LORA_FOLDER="./models/unsloth/gemma-4-E4B-it-folio" 
 
     SAVE_LORA_FOLDER=$(realpath -m "${SAVE_LORA_FOLDER}")
     DATA_FOLDER=$(realpath -m "${DATA_FOLDER}")
-    BENCHMARK_FOLDER_BA=$(realpath -m "${BENCHMARK_FOLDER_BA}")
-    BENCHMARK_FOLDER_MC=$(realpath -m "${BENCHMARK_FOLDER_MC}")
-    MIR_BENCHMARK_PATH=$(realpath -m "${MIR_BENCHMARK_PATH}")
 
-    python train.py \
-      "${TRAIN_TEST_MODEL_NAME}" \
-      "${SAVE_LORA_FOLDER}" \
-      "${DATA_FOLDER}" \
-      "${BENCHMARK_FOLDER_BA}" \
-      "${BENCHMARK_FOLDER_MC}" \
-      "tadfvwaf" \
-      100 \
-      "${MIR_BENCHMARK_PATH}"
+    python train_finetune.py \
+      --train_csv "${DATA_FOLDER}" \
+      --model_name "${TRAIN_TEST_MODEL_NAME}" \
+      --output_dir "${SAVE_LORA_FOLDER}" \
       
-    cd ./benchmarks
-    python plot_all_metrics.py
-    cd ../
     ;;
 
   bench)
